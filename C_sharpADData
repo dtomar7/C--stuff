@@ -1,0 +1,138 @@
+public void Main()
+        {
+
+        
+            string DomainPath = Dts.Variables["Root"].Value.ToString();
+            string FIlePath = Dts.Variables["FileLocation"].Value.ToString();
+            
+            DirectoryEntry de = new DirectoryEntry(DomainPath);
+
+            DirectorySearcher ds = new DirectorySearcher(de);
+            //filters out inactive or invalid employee user accounts
+            ds.Filter = "(&(objectClass=user)(objectCategory=person))";
+            ds.PropertiesToLoad.Add("mailnickname");
+            ds.PropertiesToLoad.Add("givenName");
+            ds.PropertiesToLoad.Add("sn");
+            ds.PropertiesToLoad.Add("department");
+            ds.PropertiesToLoad.Add("mail");
+            ds.PropertiesToLoad.Add("title");
+            ds.PropertiesToLoad.Add("telephonenumber");
+            ds.PropertiesToLoad.Add("ipphone");
+            ds.PropertiesToLoad.Add("mobile");
+            ds.PropertiesToLoad.Add("thumbnailphoto");
+            SearchResultCollection results = ds.FindAll();
+
+
+            //header columns for Data Table
+            DataTable dt = new DataTable();
+            dt.Columns.Add("userLogin", typeof(string));
+            dt.Columns.Add("FirstName", typeof(string));
+            dt.Columns.Add("LastName", typeof(string));
+            dt.Columns.Add("Department", typeof(string));
+            dt.Columns.Add("Email", typeof(string));
+            dt.Columns.Add("JobTitle", typeof(string));
+            dt.Columns.Add("WorkPhone", typeof(string));
+            dt.Columns.Add("WorkExtension", typeof(string));
+            dt.Columns.Add("WorkMobile", typeof(string));
+            dt.Columns.Add("Photo", typeof(string));
+
+            foreach (SearchResult sr in results)
+            {
+
+             
+                    DataRow dr = dt.NewRow();
+                    DirectoryEntry entry = sr.GetDirectoryEntry();
+                if (entry.Properties["title"].Value != null && entry.Properties["mailnickname"].Value != null)
+                {
+                    if (entry.Properties["mailnickname"].Count > 0)
+                        dr["userLogin"] = entry.Properties["mailnickname"].Value.ToString().Replace(",",";").Replace("\"", "'");
+                    if (entry.Properties["givenname"].Count > 0)
+                        dr["FirstName"] = entry.Properties["givenname"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["sn"].Count > 0)
+                        dr["LastName"] = entry.Properties["sn"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["department"].Count > 0)
+                        dr["Department"] = entry.Properties["department"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["mail"].Count > 0)
+                        dr["Email"] = entry.Properties["mail"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["title"].Count > 0)
+                        dr["JobTitle"] = entry.Properties["title"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["telephonenumber"].Count > 0)
+                        dr["WorkPhone"] = entry.Properties["telephonenumber"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["ipphone"].Count > 0)
+                        dr["WorkExtension"] = entry.Properties["ipphone"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["mobile"].Count > 0)
+                        dr["WorkMobile"] = entry.Properties["mobile"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    if (entry.Properties["thumbnailphoto"].Count > 0)
+                        dr["Photo"] = entry.Properties["thumbnailphoto"].Value.ToString().Replace(",", ";").Replace("\"", "'");
+                    dt.Rows.Add(dr);
+                }
+            }
+
+            string fullFilePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FIlePath);
+            //move datatable into CSV
+            CreateCSVFile(dt, fullFilePath);
+
+        }
+
+
+        //creating the CSV file with the AD user info
+        public void CreateCSVFile(DataTable dt, string strPath)
+        {
+            try
+            {
+                System.IO.StreamWriter sw = new System.IO.StreamWriter(strPath, false);
+                int columnCount = dt.Columns.Count;
+                for (int i = 0; i < columnCount; i++)
+                {
+                    sw.Write(dt.Columns[i]);
+                    if (i < columnCount - 1)
+                    {
+                        sw.Write(",");
+                    }
+                }
+                sw.Write(sw.NewLine);
+
+                foreach (DataRow dr in dt.Rows)
+                {
+                    for (int i = 0; i < columnCount; i++)
+                    {
+                        if (!Convert.IsDBNull(dr[i]))
+                        {
+                            sw.Write(dr[i].ToString());
+                        }
+                        if (i < columnCount - 1)
+                        {
+                            sw.Write(",");
+                        }
+                    }
+                    sw.Write(sw.NewLine);
+                }
+                sw.Close();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+      
+		}
+
+        private bool GetProperty(SearchResult result, string v)
+        {
+            throw new NotImplementedException();
+        }
+
+        #region ScriptResults declaration
+        /// <summary>
+        /// This enum provides a convenient shorthand within the scope of this class for setting the
+        /// result of the script.
+        /// 
+        /// This code was generated automatically.
+        /// </summary>
+        enum ScriptResults
+        {
+            Success = Microsoft.SqlServer.Dts.Runtime.DTSExecResult.Success,
+            Failure = Microsoft.SqlServer.Dts.Runtime.DTSExecResult.Failure
+        };
+        #endregion
+
+	}
